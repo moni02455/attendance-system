@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الحضور - الإعدادات</title>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+<script src="/src/js/firebase-config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* نفس أنماط لوحة التحكم */
+        :root {
+            --primary-color: #4e4376;
+            --secondary-color: #2b5876;
+            --error-color: #e74c3c;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+        }
+        * {
+            box-sizing: border-box;
+            font-family: 'Tajawal', 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+        .logo h2 {
+            font-size: 1.3rem;
+        }
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: white;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        .logout-btn {
+            background-color: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 0.4rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .container {
+            display: flex;
+            min-height: calc(100vh - 68px);
+        }
+        .sidebar {
+            width: 250px;
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem 0;
+        }
+        .sidebar-menu {
+            list-style: none;
+        }
+        .menu-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: #555;
+            font-weight: 500;
+        }
+        .menu-item:hover, .menu-item.active {
+            background-color: rgba(78, 67, 118, 0.1);
+            color: var(--primary-color);
+            border-right: 3px solid var(--primary-color);
+        }
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .dashboard-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+        .date-display {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        .settings-section {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+        .action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .action-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        .settings-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 0.95rem;
+            color: #555;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            font-weight: 500;
+        }
+        .settings-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.95rem;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .form-actions {
+            grid-column: span 2;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+                }
+        .save-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .cancel-btn {
+            background-color: var(--error-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .system-settings {
+            margin-top: 2rem;
+        }
+        .settings-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+        .settings-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--success-color);
+        }
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 70px;
+                overflow: hidden;
+            }
+            .menu-item span {
+                display: none;
+            }
+            .menu-item {
+                justify-content: center;
+                padding: 0.8rem 0;
+            }
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                padding: 0;
+            }
+            .sidebar-menu {
+                display: flex;
+                overflow-x: auto;
+            }
+            .menu-item {
+                padding: 0.8rem 1rem;
+                white-space: nowrap;
+            }
+            .menu-item span {
+                display: inline;
+            }
+            .settings-form {
+                grid-template-columns: 1fr;
+            }
+            .form-actions {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <img src="assets/logo.png" alt="شعار المدرسة" id="logo">
+            <h2>نظام الحضور والغياب</h2>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">م</div>
+                <span id="userName">محمد أحمد</span>
+            </div>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="menu-item" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>لوحة التحكم</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='students.html'">
+                    <i class="fas fa-users"></i>
+                    <span>الطلاب</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='attendance.html'">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>الحضور اليومي</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='reports.html'">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>التقارير</span>
+                </li>
+                <li class="menu-item active">
+                    <i class="fas fa-cog"></i>
+                    <span>الإعدادات</span>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">الإعدادات</h1>
+                <div class="date-display" id="currentDate">الاثنين، 15 يونيو 2023</div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-tabs">
+                    <button class="tab-btn active" data-tab="profile">الملف الشخصي</button>
+                    <button class="tab-btn" data-tab="account">حساب المستخدم</button>
+                    <button class="tab-btn" data-tab="system">إعدادات النظام</button>
+                </div>
+
+                <div id="profile-tab" class="tab-content active">
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label for="firstName">الاسم الأول</label>
+                            <input type="text" id="firstName" class="form-control" value="محمد">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">الاسم الأخير</label>
+                            <input type="text" id="lastName" class="form-control" value="أحمد">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">البريد الإلكتروني</label>
+                            <input type="email" id="email" class="form-control" value="mohamed@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">رقم الهاتف</label>
+                            <input type="tel" id="phone" class="form-control" value="+966501234567">
+                        </div>
+                        <div class="form-actions">
+                            <button class="save-btn">حفظ التغييرات</button>
+                            <button class="cancel-btn">إلغاء</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="account-tab" class="tab-content">
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label for="currentPassword">كلمة المرور الحالية</label>
+                            <input type="password" id="currentPassword" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">كلمة المرور الجديدة</label>
+                            <input type="password" id="newPassword" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">تأكيد كلمة المرور</label>
+                            <input type="password" id="confirmPassword" class="form-control">
+                        </div>
+                        <div class="form-actions">
+                            <button class="save-btn">تغيير كلمة المرور</button>
+                            <button class="cancel-btn">إلغاء</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="system-tab" class="tab-content">
+                    <div class="settings-card">
+                        <h3>إعدادات الحضور</h3>
+                        <div class="toggle-label">
+                            <span>تفعيل التنبيهات</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-label">
+                            <span>إرسال إشعارات الغياب</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="attendanceTime">وقت الحضور الرسمي</label>
+                            <input type="time" id="attendanceTime" class="form-control" value="08:00">
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>إعدادات التقارير</h3>
+                        <div class="form-group">
+                            <label for="reportFrequency">تردد إرسال التقارير</label>
+                            <select id="reportFrequency" class="form-control">
+                                <option value="daily">يومي</option>
+                                <option value="weekly" selected>أسبوعي</option>
+                                <option value="monthly">شهري</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportEmail">البريد الإلكتروني لإرسال التقارير</label>
+                            <input type="email" id="reportEmail" class="form-control" value="admin@school.edu">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="save-btn">حفظ الإعدادات</button>
+                        <button class="cancel-btn">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // تهيئة Firebase - نفس القيم المستخدمة في الصفحات السابقة
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // عناصر الصفحة
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        const currentDate = document.getElementById('currentDate');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const logo = document.getElementById('logo');
+
+        // تحميل بيانات المستخدم
+        function loadUserData() {
+            const user = auth.currentUser;
+            if (user) {
+                database.ref('users/' + user.uid).once('value')
+                    .then(snapshot => {
+                        const userData = snapshot.val();
+                        if (userData) {
+                            const fullName = `${userData.firstName} ${userData.lastName}`;
+                            userName.textContent = fullName;
+                            userAvatar.textContent = userData.firstName.charAt(0);
+                            
+                            // تعبئة بيانات المستخدم في النموذج
+                            document.getElementById('firstName').value = userData.firstName || '';
+                            document.getElementById('lastName').value = userData.lastName || '';
+                            document.getElementById('email').value = user.email || '';
+                            document.getElementById('phone').value = userData.phone || '';
+                        }
+                    });
+            }
+        }
+
+        // تحديث التاريخ الحالي
+        function updateCurrentDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date();
+            currentDate.textContent = today.toLocaleDateString('ar-SA', options);
+        }
+
+        // تسجيل الخروج
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = 'index.html';
+            }).catch(error => {
+                console.error("Error signing out:", error);
+            });
+        });
+
+        // تبديل بين تبويبات الإعدادات
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                
+                // إزالة النشاط من جميع الأزرار والمحتويات
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // إضافة النشاط للزر والمحتوى المحدد
+                btn.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+
+        // حفظ بيانات الملف الشخصي
+        document.querySelector('#profile-tab .save-btn').addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const phone = document.getElementById('phone').value;
+            
+            database.ref('users/' + user.uid).update({
+                firstName,
+                lastName,
+                phone
+            }).then(() => {
+                alert('تم تحديث الملف الشخصي بنجاح');
+                loadUserData();
+            }).catch(error => {
+                console.error("Error updating profile:", error);
+                alert('حدث خطأ أثناء تحديث الملف الشخصي');
+            });
+        });
+
+        // تغيير كلمة المرور
+        document.querySelector('#account-tab .save-btn').addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('كلمة المرور الجديدة غير متطابقة');
+                return;
+            }
+            
+            const credential = firebase.auth.EmailAuthProvider.credential(
+                user.email, 
+                currentPassword
+            );
+            
+            user.reauthenticateWithCredential(credential).then(() => {
+                return user.updatePassword(newPassword);
+            }).then(() => {
+                alert('تم تغيير كلمة المرور بنجاح');
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            }).catch(error => {
+                console.error("Error changing password:", error);
+                alert('حدث خطأ أثناء تغيير كلمة المرور');
+            });
+        });
+
+        // حفظ إعدادات النظام
+        document.querySelector('#system-tab .save-btn').addEventListener('click', () => {
+            const attendanceTime = document.getElementById('attendanceTime').value;
+            const reportFrequency = document.getElementById('reportFrequency').value;
+            const reportEmail = document.getElementById('reportEmail').value;
+            
+            database.ref('settings').update({
+                attendanceTime,
+                reportFrequency,
+                reportEmail
+            }).then(() => {
+                alert('تم حفظ إعدادات النظام بنجاح');
+            }).catch(error => {
+                console.error("Error saving settings:", error);
+                alert('حدث خطأ أثناء حفظ الإعدادات');
+            });
+        });
+
+        // تحميل الشعار
+        logo.onerror = function() {
+            this.src = 'https://via.placeholder.com/40x40?text=LOGO';
+        };
+
+        // التحقق من حالة المستخدم
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                loadUserData();
+                updateCurrentDate();
+                
+                // تحميل إعدادات النظام
+                database.ref('settings').once('value').then(snapshot => {
+                    const settings = snapshot.val();
+                    if (settings) {
+                        document.getElementById('attendanceTime').value = settings.attendanceTime || '08:00';
+                        document.getElementById('reportFrequency').value = settings.reportFrequency || 'weekly';
+                        document.getElementById('reportEmail').value = settings.reportEmail || '';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

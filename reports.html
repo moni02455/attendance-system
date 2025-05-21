@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الحضور - التقارير</title>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+<script src="/src/js/firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* نفس أنماط لوحة التحكم */
+        :root {
+            --primary-color: #4e4376;
+            --secondary-color: #2b5876;
+            --error-color: #e74c3c;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+        }
+        * {
+            box-sizing: border-box;
+            font-family: 'Tajawal', 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+        .logo h2 {
+            font-size: 1.3rem;
+        }
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: white;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        .logout-btn {
+            background-color: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 0.4rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .container {
+            display: flex;
+            min-height: calc(100vh - 68px);
+        }
+        .sidebar {
+            width: 250px;
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem 0;
+        }
+        .sidebar-menu {
+            list-style: none;
+        }
+        .menu-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: #555;
+            font-weight: 500;
+        }
+        .menu-item:hover, .menu-item.active {
+            background-color: rgba(78, 67, 118, 0.1);
+            color: var(--primary-color);
+            border-right: 3px solid var(--primary-color);
+        }
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .dashboard-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+        .date-display {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        .reports-section {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+        .action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .action-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        .filter-bar {
+            display: flex;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .filter-select {
+            padding: 0.7rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: white;
+            font-size: 0.95rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+        .report-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .report-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        .report-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .report-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .detailed-report {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.8rem;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f9f9f9;
+            color: #555;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .export-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        .date-range {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .date-range input {
+            padding: 0.7rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.95rem;
+        }
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 70px;
+                overflow: hidden;
+            }
+            .menu-item span {
+                display: none;
+            }
+            .menu-item {
+                justify-content: center;
+                padding: 0.8rem 0;
+            }
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                padding: 0;
+            }
+            .sidebar-menu {
+                display: flex;
+                overflow-x: auto;
+            }
+            .menu-item {
+                padding: 0.8rem 1rem;
+                white-space: nowrap;
+            }
+            .menu-item span {
+                display: inline;
+            }
+            .filter-bar {
+                flex-direction: column;
+            }
+            .report-cards {
+                grid-template-columns: 1fr;
+            }
+            .date-range {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <img src="assets/logo.png" alt="شعار المدرسة" id="logo">
+            <h2>نظام الحضور والغياب</h2>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">م</div>
+                <span id="userName">محمد أحمد</span>
+            </div>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="menu-item" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>لوحة التحكم</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='students.html'">
+                    <i class="fas fa-users"></i>
+                    <span>الطلاب</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='attendance.html'">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>الحضور اليومي</span>
+                </li>
+                <li class="menu-item active">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>التقارير</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='settings.html'">
+                    <i class="fas fa-cog"></i>
+                    <span>الإعدادات</span>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">التقارير والإحصائيات</h1>
+                <div class="date-display" id="currentDate">الاثنين، 15 يونيو 2023</div>
+            </div>
+
+            <div class="reports-section">
+                <div class="section-header">
+                    <h2 class="section-title">إحصائيات الحضور</h2>
+                    <button class="action-btn" id="generateReportBtn">
+                        <i class="fas fa-chart-pie"></i> توليد التقرير
+                    </button>
+                </div>
+
+                <div class="date-range">
+                    <label for="startDate">من:</label>
+                    <input type="date" id="startDate">
+                    <label for="endDate">إلى:</label>
+                    <input type="date" id="endDate">
+                </div>
+
+                <div class="filter-bar">
+                    <select class="filter-select" id="reportType">
+                        <option value="daily">يومي</option>
+                        <option value="weekly">أسبوعي</option>
+                        <option value="monthly">شهري</option>
+                        <option value="yearly">سنوي</option>
+                    </select>
+                    <select class="filter-select" id="classFilter">
+                        <option value="">كل الفصول</option>
+                        <option value="1">الصف الأول</option>
+                        <option value="2">الصف الثاني</option>
+                        <option value="3">الصف الثالث</option>
+                    </select>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+
+                <div class="report-cards">
+                    <div class="report-card">
+                        <h3>نسبة الحضور</h3>
+                        <p>متوسط نسبة الحضور للفترة المحددة: <strong>87%</strong></p>
+                        <p>أعلى نسبة حضور: <strong>95%</strong> في 10 يونيو</p>
+                        <p>أقل نسبة حضور: <strong>78%</strong> في 3 يونيو</p>
+                    </div>
+                    <div class="report-card">
+                        <h3>نسبة الغياب</h3>
+                        <p>متوسط نسبة الغياب للفترة المحددة: <strong>8%</strong></p>
+                        <p>أعلى نسبة غياب: <strong>15%</strong> في 3 يونيو</p>
+                        <p>أقل نسبة غياب: <strong>2%</strong> في 12 يونيو</p>
+                    </div>
+                    <div class="report-card">
+                        <h3>نسبة التأخر</h3>
+                        <p>متوسط نسبة التأخر للفترة المحددة: <strong>5%</strong></p>
+                        <p>أعلى نسبة تأخر: <strong>12%</strong> في 5 يونيو</p>
+                        <p>أقل نسبة تأخر: <strong>1%</strong> في 14 يونيو</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detailed-report">
+                <div class="section-header">
+                    <h2 class="section-title">تقرير مفصل</h2>
+                    <button class="export-btn" id="exportReportBtn">
+                        <i class="fas fa-file-export"></i> تصدير إلى Excel
+                    </button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>عدد الطلاب</th>
+                            <th>الحاضرون</th>
+                            <th>الغائبون</th>
+                            <th>المتأخرون</th>
+                            <th>نسبة الحضور</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailedReportBody">
+                        <tr>
+                            <td>15/06/2023</td>
+                            <td>125</td>
+                            <td>112</td>
+                            <td>5</td>
+                            <td>8</td>
+                            <td>89.6%</td>
+                        </tr>
+                        <tr>
+                            <td>14/06/2023</td>
+                            <td>125</td>
+                            <td>120</td>
+                            <td>2</td>
+                            <td>3</td>
+                            <td>96%</td>
+                        </tr>
+                        <tr>
+                            <td>13/06/2023</td>
+                            <td>125</td>
+                            <td>115</td>
+                            <td>6</td>
+                            <td>4</td>
+                            <td>92%</td>
+                        </tr>
+                        <tr>
+                            <td>12/06/2023</td>
+                            <td>125</td>
+                            <td>123</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>98.4%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // تهيئة Firebase - نفس القيم المستخدمة في الصفحات السابقة
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // عناصر الصفحة
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        const currentDate = document.getElementById('currentDate');
+        const generateReportBtn = document.getElementById('generateReportBtn');
+        const exportReportBtn = document.getElementById('exportReportBtn');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const reportType = document.getElementById('reportType');
+        const classFilter = document.getElementById('classFilter');
+        const detailedReportBody = document.getElementById('detailedReportBody');
+        const logo = document.getElementById('logo');
+
+        // تحميل بيانات المستخدم
+        function loadUserData() {
+            const user = auth.currentUser;
+            if (user) {
+                database.ref('users/' + user.uid).once('value')
+                    .then(snapshot => {
+                        const userData = snapshot.val();
+                        if (userData) {
+                            const fullName = `${userData.firstName} ${userData.lastName}`;
+                            userName.textContent = fullName;
+                            userAvatar.textContent = userData.firstName.charAt(0);
+                        }
+                    });
+            }
+        }
+
+        // تحديث التاريخ الحالي
+        function updateCurrentDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date();
+            currentDate.textContent = today.toLocaleDateString('ar-SA', options);
+            
+            // تعيين نطاق تاريخ افتراضي (آخر أسبوع)
+            const todayISO = today.toISOString().split('T')[0];
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            const lastWeekISO = lastWeek.toISOString().split('T')[0];
+            
+            startDate.value = lastWeekISO;
+            endDate.value = todayISO;
+        }
+
+        // تسجيل الخروج
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = 'index.html';
+            }).catch(error => {
+                console.error("Error signing out:", error);
+            });
+        });
+
+        // إنشاء مخطط الحضور
+        function createAttendanceChart() {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['15 يونيو', '14 يونيو', '13 يونيو', '12 يونيو', '11 يونيو', '10 يونيو', '9 يونيو'],
+                    datasets: [
+                        {
+                            label: 'الحضور',
+                            data: [112, 120, 115, 123, 110, 118, 105],
+                            backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'الغياب',
+                            data: [5, 2, 6, 1, 8, 4, 12],
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'التأخر',
+                            data: [8, 3, 4, 1, 7, 3, 8],
+                            backgroundColor: 'rgba(243, 156, 18, 0.7)',
+                            borderColor: 'rgba(243, 156, 18, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'عدد الطلاب'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'التاريخ'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            rtl: true
+                        },
+                        title: {
+                            display: true,
+                            text: 'إحصائيات الحضور للأسبوع الماضي',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // توليد التقرير
+        function generateReport() {
+            const start = startDate.value;
+            const end = endDate.value;
+            const type = reportType.value;
+            const classId = classFilter.value;
+            
+            if (!start || !end) {
+                alert('الرجاء تحديد نطاق التاريخ أولاً');
+                return;
+            }
+            
+            // هنا سيتم جلب البيانات من Firebase حسب الفلاتر المحددة
+            console.log(`Generating report from ${start} to ${end}, type: ${type}, class: ${classId}`);
+        }
+
+        // تصدير التقرير
+        function exportReport() {
+            // هنا سيتم تصدير البيانات إلى Excel
+            alert('تم تصدير التقرير بنجاح');
+        }
+
+        // أحداث الأزرار
+        generateReportBtn.addEventListener('click', generateReport);
+        exportReportBtn.addEventListener('click', exportReport);
+
+        // تحميل الشعار
+        logo.onerror = function() {
+            this.src = 'https://via.placeholder.com/40x40?text=LOGO';
+        };
+
+        // التحقق من حالة المستخدم
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                loadUserData();
+                updateCurrentDate();
+                createAttendanceChart();
+            }
+        });
+    </script>
+</body>
+</html>
